@@ -575,7 +575,7 @@ let pendingPassportFile = null;
 // ============================================================
 (function checkConfig(){
   const w = document.getElementById('config-warn');
-  if(!CONFIG.GOOGLE_CLIENT_ID || CONFIG.GOOGLE_CLIENT_ID.length < 30 || !CONFIG.SPREADSHEET_ID || CONFIG.SPREADSHEET_ID.length < 10 || !CONFIG.API_KEY || CONFIG.API_KEY.length < 10){
+  if(!CONFIG.GOOGLE_CLIENT_ID || !CONFIG.SPREADSHEET_ID || !CONFIG.API_KEY){
     w.style.display = 'flex';
     document.getElementById('login-screen').style.display = 'none';
   }
