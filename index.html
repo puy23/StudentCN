@@ -578,6 +578,8 @@ let pendingPassportFile = null;
   if(!CONFIG.GOOGLE_CLIENT_ID || !CONFIG.SPREADSHEET_ID || !CONFIG.API_KEY){
     w.style.display = 'flex';
     document.getElementById('login-screen').style.display = 'none';
+  } else {
+    w.style.display = 'none';
   }
 })();
 
