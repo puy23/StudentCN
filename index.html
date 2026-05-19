@@ -6,7 +6,7 @@
 <title>ระบบจัดการนักศึกษาจีน</title>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://accounts.google.com/gsi/client" onload="initGoogleClient()"></script>
 <style>
 /* ========== RESET & BASE ========== */
 *{box-sizing:border-box;margin:0;padding:0}
@@ -598,15 +598,19 @@ function loadGoogleAPI(){
     },200);
   });
 }
-const tokenClient = google.accounts.oauth2.initTokenClient({
-  client_id: CONFIG.GOOGLE_CLIENT_ID,
-  scope: CONFIG.SCOPES,
-  callback: async(resp)=>{
-    if(resp.error){ showLoginError(); return; }
-    accessToken = resp.access_token;
-    await loadUserInfo(resp.access_token);
-  }
-});
+let tokenClient = null;
+
+function initGoogleClient(){
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CONFIG.GOOGLE_CLIENT_ID,
+    scope: CONFIG.SCOPES,
+    callback: async(resp)=>{
+      if(resp.error){ showLoginError(); return; }
+      accessToken = resp.access_token;
+      await loadUserInfo(resp.access_token);
+    }
+  });
+}
 
 function signInWithGoogle(){
   document.getElementById('login-loading').style.display='flex';
