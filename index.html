@@ -598,21 +598,21 @@ function loadGoogleAPI(){
     },200);
   });
 }
-async function signInWithGoogle(){
+const tokenClient = google.accounts.oauth2.initTokenClient({
+  client_id: CONFIG.GOOGLE_CLIENT_ID,
+  scope: CONFIG.SCOPES,
+  callback: async(resp)=>{
+    if(resp.error){ showLoginError(); return; }
+    accessToken = resp.access_token;
+    await loadUserInfo(resp.access_token);
+  }
+});
+
+function signInWithGoogle(){
   document.getElementById('login-loading').style.display='flex';
   document.querySelector('.btn-google').style.display='none';
   try {
-    await loadGoogleAPI();
-    const client = google.accounts.oauth2.initTokenClient({
-      client_id: CONFIG.GOOGLE_CLIENT_ID,
-      scope: CONFIG.SCOPES,
-      callback: async(resp)=>{
-        if(resp.error){ showLoginError(); return; }
-        accessToken = resp.access_token;
-        await loadUserInfo(resp.access_token);
-      }
-    });
-    client.requestAccessToken();
+    tokenClient.requestAccessToken();
   } catch(e){
     showLoginError();
   }
