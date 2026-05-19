@@ -726,7 +726,7 @@ async function fetchAdmins(){
   try {
     const d=await sheetsGet(CONFIG.SHEET_ADMINS+'!A2:A100');
     return (d.values||[]).map(r=>r[0]&&r[0].trim().toLowerCase()).filter(Boolean);
-  } catch(){ return []; }
+  } catch(e){ return []; }
 }
 async function loadStudents(){
   const d=await sheetsGet(CONFIG.SHEET_STUDENTS+'!A2:T5000');
