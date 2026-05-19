@@ -575,7 +575,7 @@ let pendingPassportFile = null;
 // ============================================================
 (function checkConfig(){
   const w = document.getElementById('config-warn');
-  if(CONFIG.GOOGLE_CLIENT_ID.includes('852205852155-v8lflpuu3deu6tepr1n0s4gis1o58dl6.apps.googleusercontent.com') || CONFIG.SPREADSHEET_ID.includes('1VeK-ZXExYOkWsId6wV1nXjNMIFQaf3I2')){
+  if(!CONFIG.GOOGLE_CLIENT_ID || CONFIG.GOOGLE_CLIENT_ID.length < 30 || !CONFIG.SPREADSHEET_ID || CONFIG.SPREADSHEET_ID.length < 10 || !CONFIG.API_KEY || CONFIG.API_KEY.length < 10){
     w.style.display = 'flex';
     document.getElementById('login-screen').style.display = 'none';
   }
