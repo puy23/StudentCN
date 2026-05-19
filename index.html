@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ระบบจัดการนักศึกษาจีน</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+/* ========== RESET & BASE ========== */
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --primary:#1a56db;--primary-dark:#1e429f;--primary-light:#ebf5ff;
+  --success:#057a55;--warning:#9f580a;--danger:#c81e1e;
+  --gray-50:#f9fafb;--gray-100:#f3f4f6;--gray-200:#e5e7eb;
+  --gray-300:#d1d5db;--gray-400:#9ca3af;--gray-500:#6b7280;
+  --gray-600:#4b5563;--gray-700:#374151;--gray-800:#1f2937;--gray-900:#111827;
+  --radius:8px;--radius-lg:12px;--font:'Sarabun',sans-serif;
+}
+body{font-family:var(--font);background:var(--gray-50);color:var(--gray-800);font-size:15px;min-height:100vh}
+
+/* ========== LOGIN SCREEN ========== */
+.login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1e3a8a 0%,#1a56db 100%)}
+.login-card{background:#fff;border-radius:20px;padding:48px 40px;width:100%;max-width:420px;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,0.2)}
+.login-icon{width:72px;height:72px;background:var(--primary-light);border-radius:20px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:36px}
+.login-title{font-size:22px;font-weight:700;color:var(--gray-900);margin-bottom:6px}
+.login-sub{font-size:14px;color:var(--gray-500);margin-bottom:32px;line-height:1.6}
+.btn-google{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;padding:13px 20px;border:2px solid var(--gray-200);border-radius:var(--radius-lg);background:#fff;font-size:15px;font-weight:500;color:var(--gray-700);cursor:pointer;transition:all .2s;font-family:var(--font)}
+.btn-google:hover{background:var(--gray-50);border-color:var(--gray-300);box-shadow:0 2px 8px rgba(0,0,0,0.08)}
+.btn-google svg{width:22px;height:22px;flex-shrink:0}
+.login-note{margin-top:20px;font-size:12px;color:var(--gray-400);line-height:1.6}
+.login-loading{display:none;flex-direction:column;align-items:center;gap:12px;padding:20px 0}
+.spinner{width:36px;height:36px;border:3px solid var(--gray-200);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ========== APP LAYOUT ========== */
+.app{display:none;min-height:100vh}
+.app.show{display:flex}
+.sidebar{width:240px;background:var(--gray-900);flex-shrink:0;display:flex;flex-direction:column;position:fixed;height:100vh;overflow-y:auto;z-index:100}
+.main{margin-left:240px;flex:1;display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:#fff;border-bottom:1px solid var(--gray-200);padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.content{padding:24px;flex:1}
+
+/* SIDEBAR */
+.sidebar-logo{padding:20px 16px;border-bottom:1px solid rgba(255,255,255,0.08)}
+.sidebar-logo h1{color:#fff;font-size:15px;font-weight:600;line-height:1.4}
+.sidebar-logo p{color:rgba(255,255,255,0.4);font-size:11px;margin-top:2px}
+.nav-section{padding:12px 16px 4px;color:rgba(255,255,255,0.35);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 16px;color:rgba(255,255,255,0.65);cursor:pointer;font-size:13px;transition:all .15s;border-left:3px solid transparent}
+.nav-item:hover{background:rgba(255,255,255,0.05);color:#fff}
+.nav-item.active{background:rgba(26,86,219,0.3);color:#93c5fd;border-left-color:#3b82f6}
+.nav-item svg{width:17px;height:17px;flex-shrink:0}
+.nav-item.admin-only{display:none}
+.sidebar-user{padding:12px 16px;border-top:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:10px}
+.user-avatar{width:32px;height:32px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#fff;flex-shrink:0;overflow:hidden}
+.user-avatar img{width:100%;height:100%;object-fit:cover}
+.user-info{flex:1;min-width:0}
+.user-name{font-size:12px;font-weight:500;color:#fff;truncate:ellipsis;overflow:hidden;white-space:nowrap}
+.user-role{font-size:10px;color:rgba(255,255,255,0.4)}
+.btn-signout{background:none;border:none;cursor:pointer;color:rgba(255,255,255,0.4);padding:4px;border-radius:4px}
+.btn-signout:hover{color:#fff;background:rgba(255,255,255,0.1)}
+
+/* TOPBAR */
+.topbar-title{font-size:15px;font-weight:600;color:var(--gray-800)}
+.topbar-actions{display:flex;align-items:center;gap:8px}
+.badge-role{border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600}
+.badge-admin{background:#fef3c7;color:#92400e;border:1px solid #fcd34d}
+.badge-user{background:#e0f2fe;color:#075985;border:1px solid #bae6fd}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:var(--radius);font-size:13px;font-weight:500;cursor:pointer;border:1px solid transparent;transition:all .15s;font-family:var(--font);white-space:nowrap}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-dark)}
+.btn-secondary{background:#fff;color:var(--gray-700);border-color:var(--gray-300)}
+.btn-secondary:hover{background:var(--gray-50)}
+.btn-success{background:#057a55;color:#fff}
+.btn-success:hover{background:#046c4e}
+.btn-danger{background:#c81e1e;color:#fff}
+.btn-danger:hover{background:#9b1c1c}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-icon{padding:6px}
+.btn svg{width:14px;height:14px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* CARDS & TABLES */
+.card{background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius-lg);overflow:hidden}
+.card-header{padding:14px 18px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:14px;font-weight:600;color:var(--gray-800)}
+.card-body{padding:18px}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:20px}
+.stat-card{background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius-lg);padding:14px 18px}
+.stat-label{font-size:11px;color:var(--gray-500);font-weight:500;margin-bottom:5px}
+.stat-value{font-size:26px;font-weight:700;color:var(--gray-900);line-height:1}
+.stat-sub{font-size:11px;color:var(--gray-400);margin-top:3px}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{background:var(--gray-50);padding:9px 12px;text-align:left;font-weight:600;color:var(--gray-600);font-size:11px;border-bottom:1px solid var(--gray-200);white-space:nowrap;text-transform:uppercase;letter-spacing:.04em}
+tbody td{padding:10px 12px;border-bottom:1px solid var(--gray-100);color:var(--gray-700)}
+tbody tr:hover{background:var(--gray-50)}
+tbody tr:last-child td{border-bottom:none}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500;white-space:nowrap}
+.badge-blue{background:#ebf5ff;color:#1a56db}
+.badge-green{background:#f3faf7;color:#057a55}
+.badge-yellow{background:#fffbeb;color:#9f580a}
+.badge-red{background:#fdf2f2;color:#c81e1e}
+.badge-gray{background:var(--gray-100);color:var(--gray-600)}
+.badge-purple{background:#f5f3ff;color:#5521b5}
+
+/* FORM & MODAL */
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group.full{grid-column:1/-1}
+.form-label{font-size:12px;font-weight:500;color:var(--gray-700)}
+.req{color:#c81e1e}
+.form-control{padding:8px 11px;border:1px solid var(--gray-300);border-radius:var(--radius);font-size:13px;font-family:var(--font);color:var(--gray-800);background:#fff;transition:border .15s}
+.form-control:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(26,86,219,0.1)}
+select.form-control{cursor:pointer}
+textarea.form-control{resize:vertical;min-height:70px}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;opacity:0;visibility:hidden;transition:all .2s}
+.modal-overlay.show{opacity:1;visibility:visible}
+.modal{background:#fff;border-radius:var(--radius-lg);width:100%;max-width:780px;margin:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2)}
+.modal-header{padding:14px 18px;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:15px;font-weight:600}
+.modal-body{padding:18px}
+.modal-footer{padding:14px 18px;border-top:1px solid var(--gray-200);display:flex;justify-content:flex-end;gap:8px}
+.close-btn{background:none;border:none;cursor:pointer;color:var(--gray-400);padding:4px;border-radius:4px;display:flex}
+.close-btn:hover{background:var(--gray-100);color:var(--gray-700)}
+
+/* TABS */
+.tabs{display:flex;border-bottom:2px solid var(--gray-200);margin-bottom:16px}
+.tab{padding:9px 14px;font-size:13px;font-weight:500;color:var(--gray-500);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s}
+.tab:hover{color:var(--gray-700)}
+.tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+
+/* SEARCH */
+.search-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:0}
+.search-wrap{position:relative;flex:1;min-width:180px}
+.search-wrap svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--gray-400)}
+.search-input{padding:7px 10px 7px 30px;border:1px solid var(--gray-300);border-radius:var(--radius);font-size:13px;font-family:var(--font);width:100%}
+.search-input:focus{outline:none;border-color:var(--primary)}
+
+/* PHOTO */
+.photo-thumb{width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid var(--gray-200)}
+.photo-placeholder{width:34px;height:34px;border-radius:50%;background:var(--primary-light);border:2px solid var(--gray-200);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--primary)}
+.upload-area{border:2px dashed var(--gray-300);border-radius:var(--radius);padding:18px;text-align:center;cursor:pointer;transition:all .15s;background:var(--gray-50)}
+.upload-area:hover{border-color:var(--primary);background:var(--primary-light)}
+
+/* PAGE */
+.page{display:none}
+.page.active{display:block}
+
+/* LOADING */
+.loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,0.85);z-index:2000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;opacity:0;visibility:hidden;transition:all .2s}
+.loading-overlay.show{opacity:1;visibility:visible}
+.loading-text{font-size:13px;color:var(--gray-500)}
+
+/* PAGINATION */
+.pagination{display:flex;align-items:center;gap:4px;justify-content:flex-end;margin-top:12px}
+.page-btn{padding:5px 9px;border:1px solid var(--gray-200);background:#fff;border-radius:var(--radius);font-size:12px;cursor:pointer;color:var(--gray-600);min-width:30px;text-align:center;transition:all .15s}
+.page-btn:hover{background:var(--gray-50)}
+.page-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.page-btn:disabled{opacity:.4;cursor:default}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--gray-800);color:#fff;padding:10px 16px;border-radius:var(--radius-lg);font-size:13px;z-index:3000;opacity:0;transform:translateY(8px);transition:all .3s;max-width:300px}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.success{background:#057a55}
+.toast.error{background:#c81e1e}
+.toast.warn{background:#9f580a}
+
+/* BAR CHART */
+.bar-chart{display:flex;flex-direction:column;gap:7px}
+.bar-row{display:flex;align-items:center;gap:8px}
+.bar-label{font-size:11px;color:var(--gray-600);min-width:130px;text-align:right;flex-shrink:0}
+.bar-track{flex:1;height:16px;background:var(--gray-100);border-radius:20px;overflow:hidden}
+.bar-fill{height:100%;border-radius:20px;transition:width .6s ease}
+.bar-count{font-size:11px;color:var(--gray-500);min-width:28px}
+
+/* ADMIN PANEL */
+.option-list{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.option-tag{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;background:var(--gray-100);border-radius:20px;font-size:12px;color:var(--gray-700)}
+.option-tag button{background:none;border:none;cursor:pointer;color:var(--gray-400);padding:0;line-height:1;font-size:14px}
+.option-tag button:hover{color:var(--danger)}
+
+/* STATUS INDICATOR */
+.sync-status{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--gray-400)}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--gray-300)}
+.sync-dot.ok{background:#10b981}
+.sync-dot.syncing{background:#f59e0b;animation:pulse 1s infinite}
+.sync-dot.error{background:#c81e1e}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* DETAIL */
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.detail-row{padding:7px 0;border-bottom:1px solid var(--gray-100)}
+.detail-key{font-size:10px;color:var(--gray-400);font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
+.detail-val{font-size:13px;color:var(--gray-800);font-weight:500}
+.student-detail-wrap{display:grid;grid-template-columns:180px 1fr;gap:20px}
+.detail-photo{width:150px;height:190px;object-fit:cover;border-radius:var(--radius-lg);border:1px solid var(--gray-200)}
+.detail-photo-ph{width:150px;height:190px;border-radius:var(--radius-lg);border:2px dashed var(--gray-300);background:var(--gray-50);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--gray-400);font-size:11px}
+
+/* CONFIG NOTICE */
+.config-notice{background:#fffbeb;border:1px solid #fcd34d;border-radius:var(--radius-lg);padding:16px 18px;margin-bottom:20px}
+.config-notice h3{font-size:14px;font-weight:600;color:#92400e;margin-bottom:8px}
+.config-notice p{font-size:13px;color:#78350f;line-height:1.6}
+.config-notice code{background:#fef3c7;padding:1px 5px;border-radius:4px;font-size:12px;font-family:monospace}
+</style>
+</head>
+<body>
+
+<!-- ====== CONFIG ====== -->
+<!-- 
+  ⚙️ แก้ไขค่านี้ก่อนใช้งาน:
+  1. GOOGLE_CLIENT_ID  → ไปสร้างที่ console.cloud.google.com > APIs & Services > Credentials
+  2. SPREADSHEET_ID    → ID ของ Google Sheets ที่ใช้เก็บข้อมูล (จาก URL)
+  3. API_KEY           → Google Sheets API Key (console.cloud.google.com > APIs & Services > Credentials)
+-->
+<script>
+const CONFIG = {
+  GOOGLE_CLIENT_ID: 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com',
+  SPREADSHEET_ID:   'YOUR_GOOGLE_SPREADSHEET_ID',
+  API_KEY:          'YOUR_GOOGLE_API_KEY',
+  SCOPES: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file openid email profile',
+  SHEET_STUDENTS:   'Students',
+  SHEET_ADMINS:     'Admins',
+  SHEET_OPTIONS:    'Options',
+  APP_NAME:         'ระบบจัดการนักศึกษาจีน',
+};
+</script>
+
+<!-- ====== LOGIN SCREEN ====== -->
+<div class="login-screen" id="login-screen">
+  <div class="login-card">
+    <div class="login-icon">🎓</div>
+    <h1 class="login-title">ระบบจัดการนักศึกษาจีน</h1>
+    <p class="login-sub">Chinese Student Management System<br>กรุณาเข้าสู่ระบบด้วย Gmail ขององค์กร</p>
+    <button class="btn-google" onclick="signInWithGoogle()">
+      <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      เข้าสู่ระบบด้วย Google
+    </button>
+    <div class="login-loading" id="login-loading">
+      <div class="spinner"></div>
+      <span style="font-size:13px;color:var(--gray-500)">กำลังเชื่อมต่อ...</span>
+    </div>
+    <p class="login-note">เฉพาะบัญชี Gmail ที่ได้รับอนุญาตเท่านั้น<br>ติดต่อผู้ดูแลระบบหากไม่สามารถเข้าใช้งานได้</p>
+  </div>
+</div>
+
+<!-- ====== CONFIG WARNING (shown when not configured) ====== -->
+<div id="config-warn" style="display:none;position:fixed;inset:0;background:#1e3a8a;display:flex;align-items:center;justify-content:center;z-index:9999">
+  <div style="background:#fff;border-radius:16px;padding:36px;max-width:500px;width:90%">
+    <div style="font-size:32px;text-align:center;margin-bottom:16px">⚙️</div>
+    <h2 style="font-size:18px;font-weight:700;text-align:center;margin-bottom:12px;color:var(--gray-900)">ต้องตั้งค่าก่อนใช้งาน</h2>
+    <p style="font-size:13px;color:var(--gray-600);line-height:1.8;margin-bottom:16px">กรุณาเปิดไฟล์ <code style="background:var(--gray-100);padding:2px 6px;border-radius:4px">index.html</code> และแก้ไขค่าใน <code style="background:var(--gray-100);padding:2px 6px;border-radius:4px">CONFIG</code> ด้านบน:</p>
+    <div style="background:var(--gray-50);border-radius:var(--radius);padding:12px;font-size:12px;font-family:monospace;line-height:2;color:var(--gray-700)">
+      GOOGLE_CLIENT_ID: 'xxxx.apps.googleusercontent.com'<br>
+      SPREADSHEET_ID:   'xxxx'<br>
+      API_KEY:          'xxxx'
+    </div>
+    <p style="font-size:12px;color:var(--gray-400);margin-top:12px;text-align:center">ดูคู่มือการตั้งค่าในไฟล์ SETUP_GUIDE.md</p>
+  </div>
+</div>
+
+<!-- ====== MAIN APP ====== -->
+<div class="app" id="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <h1>🎓 นักศึกษาจีน</h1>
+      <p>Chinese Student Management</p>
+    </div>
+    <nav style="padding:10px 0;flex:1">
+      <div class="nav-section">เมนูหลัก</div>
+      <div class="nav-item active" onclick="showPage('dashboard')">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1" stroke-width="2"/><rect x="14" y="3" width="7" height="7" rx="1" stroke-width="2"/><rect x="3" y="14" width="7" height="7" rx="1" stroke-width="2"/><rect x="14" y="14" width="7" height="7" rx="1" stroke-width="2"/></svg>
+        Dashboard
+      </div>
+      <div class="nav-item" onclick="showPage('students')">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+        รายชื่อนักศึกษา
+      </div>
+      <div class="nav-item" onclick="showPage('visa')">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        ติดตามวีซ่า
+      </div>
+      <div class="nav-section admin-only">ผู้ดูแล</div>
+      <div class="nav-item admin-only" onclick="showPage('admin')">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        Admin Panel
+      </div>
+    </nav>
+    <div class="sidebar-user">
+      <div class="user-avatar" id="user-avatar">?</div>
+      <div class="user-info">
+        <div class="user-name" id="user-name">-</div>
+        <div class="user-role" id="user-role-label">-</div>
+      </div>
+      <button class="btn-signout" onclick="signOut()" title="ออกจากระบบ">
+        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span class="topbar-title" id="page-title">Dashboard</span>
+        <div class="sync-status">
+          <div class="sync-dot ok" id="sync-dot"></div>
+          <span id="sync-text">เชื่อมต่อแล้ว</span>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <span class="badge-role" id="role-badge">-</span>
+        <button class="btn btn-success admin-only" onclick="exportExcel()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          Export Excel
+        </button>
+        <button class="btn btn-primary admin-only" onclick="openAddModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          เพิ่มนักศึกษา
+        </button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <div class="page active" id="page-dashboard">
+        <div class="stats-grid" id="stats-grid"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="card">
+            <div class="card-header"><span class="card-title">แยกตามกลุ่มเรียน</span></div>
+            <div class="card-body"><div class="bar-chart" id="chart-group"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">แยกตาม Degree</span></div>
+            <div class="card-body"><div class="bar-chart" id="chart-degree"></div></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:16px">
+          <div class="card-header"><span class="card-title">⚠️ วีซ่าใกล้หมด (60 วัน)</span></div>
+          <div class="card-body" id="visa-alert-box"></div>
+        </div>
+      </div>
+
+      <!-- STUDENTS -->
+      <div class="page" id="page-students">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">รายชื่อนักศึกษา <span id="student-count" style="font-size:11px;color:var(--gray-400);font-weight:400"></span></span>
+          </div>
+          <div class="card-body" style="padding-bottom:10px">
+            <div class="search-bar">
+              <div class="search-wrap">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <input type="text" class="search-input" id="search-input" placeholder="ค้นหาชื่อ, Passport, ชื่อไทย..." oninput="filterStudents()">
+              </div>
+              <select class="form-control" id="filter-group" onchange="filterStudents()" style="min-width:130px;font-size:12px"><option value="">กลุ่มเรียน (ทั้งหมด)</option></select>
+              <select class="form-control" id="filter-degree" onchange="filterStudents()" style="min-width:110px;font-size:12px"><option value="">Degree (ทั้งหมด)</option></select>
+              <select class="form-control" id="filter-agency" onchange="filterStudents()" style="min-width:100px;font-size:12px"><option value="">Agency</option></select>
+              <button class="btn btn-secondary btn-sm" onclick="clearFilters()">ล้าง</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th></th><th>No.</th><th>ชื่อ-นามสกุล</th><th>ชื่อไทย</th>
+                <th>กลุ่มเรียน</th><th>Degree</th><th>Agency</th>
+                <th>วีซ่า</th><th>Passport</th><th>Remark</th>
+                <th style="text-align:center">จัดการ</th>
+              </tr></thead>
+              <tbody id="students-tbody"></tbody>
+            </table>
+          </div>
+          <div style="padding:10px 18px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--gray-100)">
+            <span style="font-size:11px;color:var(--gray-500)" id="page-info"></span>
+            <div class="pagination" id="pagination"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VISA -->
+      <div class="page" id="page-visa">
+        <div class="card">
+          <div class="card-header"><span class="card-title">ติดตามวีซ่า</span></div>
+          <div class="card-body">
+            <div class="tabs">
+              <div class="tab active" onclick="showVisaTab('all',this)">ทั้งหมด</div>
+              <div class="tab" onclick="showVisaTab('expired',this)">หมดอายุแล้ว</div>
+              <div class="tab" onclick="showVisaTab('soon',this)">ใกล้หมด (60 วัน)</div>
+              <div class="tab" onclick="showVisaTab('ok',this)">ปกติ</div>
+            </div>
+            <div id="visa-table-wrap"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADMIN -->
+      <div class="page" id="page-admin">
+        <div class="config-notice">
+          <h3>📋 Google Sheets Structure</h3>
+          <p>ตรวจสอบให้แน่ใจว่า Google Sheets มี 3 Sheet ตามนี้:<br>
+          <code>Students</code> — ข้อมูลนักศึกษา | <code>Admins</code> — รายชื่อ Admin (คอลัมน์ A = email) | <code>Options</code> — ตัวเลือก dropdown</p>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="card">
+            <div class="card-header"><span class="card-title">ตั้งค่าตัวเลือก Dropdown</span></div>
+            <div class="card-body" id="admin-options"></div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">จัดการ Admin</span>
+              <button class="btn btn-primary btn-sm" onclick="openAddAdminModal()">+ เพิ่ม Admin</button>
+            </div>
+            <div class="card-body" id="admin-list"></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:16px">
+          <div class="card-header"><span class="card-title">นำเข้า / ส่งออกข้อมูล</span></div>
+          <div class="card-body">
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <label class="btn btn-secondary" style="cursor:pointer">
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                Import Excel
+                <input type="file" accept=".xlsx,.xls" onchange="importExcel(this)" style="display:none">
+              </label>
+              <button class="btn btn-success" onclick="exportExcel()">Export Excel</button>
+              <button class="btn btn-secondary" onclick="syncFromSheets()">
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                Sync จาก Sheets
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ADD/EDIT MODAL -->
+<div class="modal-overlay" id="student-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-title">เพิ่มนักศึกษา</span>
+      <button class="close-btn" onclick="closeModal()"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="tabs">
+        <div class="tab active" onclick="showFormTab('ftab-basic',this)">ข้อมูลทั่วไป</div>
+        <div class="tab" onclick="showFormTab('ftab-academic',this)">การศึกษา</div>
+        <div class="tab" onclick="showFormTab('ftab-visa',this)">วีซ่า & เอกสาร</div>
+        <div class="tab" onclick="showFormTab('ftab-photo',this)">รูปภาพ</div>
+      </div>
+      <div id="ftab-basic">
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">Agency</label><select class="form-control" id="f-agency"></select></div>
+          <div class="form-group"><label class="form-label">No.</label><input class="form-control" type="number" id="f-no"></div>
+          <div class="form-group"><label class="form-label">Student ID</label><input class="form-control" type="text" id="f-student_id"></div>
+          <div class="form-group"><label class="form-label">คำนำหน้า</label>
+            <select class="form-control" id="f-prefix"><option>Mr.</option><option>Miss</option><option>Mrs.</option><option>Ms.</option></select>
+          </div>
+          <div class="form-group"><label class="form-label">ชื่อ นามสกุล (EN) <span class="req">*</span></label><input class="form-control" type="text" id="f-fullname" placeholder="e.g. Zhang Wei" required></div>
+          <div class="form-group"><label class="form-label">ชื่อไทย</label><input class="form-control" type="text" id="f-thai_name"></div>
+          <div class="form-group full"><label class="form-label">ที่อยู่ปัจจุบัน</label><textarea class="form-control" id="f-address"></textarea></div>
+        </div>
+      </div>
+      <div id="ftab-academic" style="display:none">
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">คณะ</label><select class="form-control" id="f-faculty"></select></div>
+          <div class="form-group"><label class="form-label">กลุ่มเรียน</label><select class="form-control" id="f-group"></select></div>
+          <div class="form-group"><label class="form-label">เทอม</label><select class="form-control" id="f-term"></select></div>
+          <div class="form-group"><label class="form-label">Degree</label><select class="form-control" id="f-degree"></select></div>
+          <div class="form-group"><label class="form-label">Student Type</label><select class="form-control" id="f-student_type"></select></div>
+          <div class="form-group"><label class="form-label">ปีที่จบ</label><input class="form-control" type="text" id="f-grad_year"></div>
+        </div>
+      </div>
+      <div id="ftab-visa" style="display:none">
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">Passport No.</label><input class="form-control" type="text" id="f-passport_no"></div>
+          <div class="form-group"><label class="form-label">วันต่อวีซ่า</label><input class="form-control" type="date" id="f-visa_date"></div>
+          <div class="form-group"><label class="form-label">ครั้งที่</label><input class="form-control" type="number" id="f-visa_count"></div>
+          <div class="form-group full"><label class="form-label">Remark</label><textarea class="form-control" id="f-remark"></textarea></div>
+        </div>
+      </div>
+      <div id="ftab-photo" style="display:none">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div>
+            <label class="form-label" style="display:block;margin-bottom:6px">รูปถ่าย</label>
+            <div class="upload-area" onclick="document.getElementById('f-photo-file').click()">
+              <img id="prev-photo" style="display:none;width:90px;height:110px;object-fit:cover;border-radius:var(--radius);margin:0 auto 6px">
+              <svg id="ico-photo" width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:var(--gray-400);margin:0 auto"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              <p style="font-size:11px;color:var(--gray-400);margin-top:5px">คลิกเพื่ออัพโหลด (max 5MB)</p>
+            </div>
+            <input type="file" id="f-photo-file" accept="image/*" style="display:none" onchange="handlePhotoUpload(this,'prev-photo','ico-photo','f-photo-url','photo')">
+            <input type="hidden" id="f-photo-url">
+          </div>
+          <div>
+            <label class="form-label" style="display:block;margin-bottom:6px">รูป Passport</label>
+            <div class="upload-area" onclick="document.getElementById('f-passport-file').click()">
+              <img id="prev-passport" style="display:none;width:90px;height:110px;object-fit:cover;border-radius:var(--radius);margin:0 auto 6px">
+              <svg id="ico-passport" width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:var(--gray-400);margin:0 auto"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1"/></svg>
+              <p style="font-size:11px;color:var(--gray-400);margin-top:5px">คลิกเพื่ออัพโหลด (max 5MB)</p>
+            </div>
+            <input type="file" id="f-passport-file" accept="image/*" style="display:none" onchange="handlePhotoUpload(this,'prev-passport','ico-passport','f-passport-url','passport')">
+            <input type="hidden" id="f-passport-url">
+          </div>
+        </div>
+        <p style="font-size:11px;color:var(--gray-400);margin-top:10px">รูปภาพจะถูกอัพโหลดไปยัง Google Drive โดยอัตโนมัติเมื่อกด บันทึก</p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">ยกเลิก</button>
+      <button class="btn btn-primary" onclick="saveStudent()" id="save-btn">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="modal-overlay" id="detail-modal">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-header">
+      <span class="modal-title" id="dm-title">ข้อมูลนักศึกษา</span>
+      <button class="close-btn" onclick="closeDetailModal()"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+    </div>
+    <div class="modal-body" id="dm-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeDetailModal()">ปิด</button>
+      <button class="btn btn-primary admin-only" id="dm-edit-btn">แก้ไข</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOADING OVERLAY -->
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <span class="loading-text" id="loading-text">กำลังโหลด...</span>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+let currentUser = null;
+let isAdmin = false;
+let students = [];
+let options = {
+  agency:['Open','TEC','Thai'],
+  faculty:['คณะบริหารธุรกิจฯ (บท.)','ครุศาสตร์ฯ (คอ.)','วิศวกรรมศาสตร์ (วส.)'],
+  group:['IGMG16721E','IGMG16722E','IGMG16723E','IGMG16741E','IGMG16742E','MBA16721E','MBA16821E','DBA 16832E','DBA 26632','DEA 36832','MEA 26832','MEE16723E'],
+  term:['1/2566','2/2566','1/2567','2/2567','1/2568','2/2568'],
+  degree:['ป.ตรี','ป.โท','ป.เอก'],
+  student_type:['เทียบโอน','ปกติ'],
+};
+let admins = [];
+let currentPage = 1;
+const PAGE_SIZE = 15;
+let filteredStudents = [];
+let editingRowIndex = -1;
+let visaTabMode = 'all';
+let accessToken = '';
+let pendingPhotoFile = null;
+let pendingPassportFile = null;
+
+// ============================================================
+// CONFIG CHECK
+// ============================================================
+(function checkConfig(){
+  const w = document.getElementById('config-warn');
+  if(CONFIG.GOOGLE_CLIENT_ID.includes('YOUR_') || CONFIG.SPREADSHEET_ID.includes('YOUR_')){
+    w.style.display = 'flex';
+    document.getElementById('login-screen').style.display = 'none';
+  }
+})();
+
+// ============================================================
+// GOOGLE AUTH (GAPI)
+// ============================================================
+function loadGoogleAPI(){
+  return new Promise(resolve=>{
+    const s=document.createElement('script');
+    s.src='https://accounts.google.com/gsi/client';
+    s.onload=resolve;
+    document.head.appendChild(s);
+  });
+}
+async function signInWithGoogle(){
+  document.getElementById('login-loading').style.display='flex';
+  document.querySelector('.btn-google').style.display='none';
+  try {
+    await loadGoogleAPI();
+    const client = google.accounts.oauth2.initTokenClient({
+      client_id: CONFIG.GOOGLE_CLIENT_ID,
+      scope: CONFIG.SCOPES,
+      callback: async(resp)=>{
+        if(resp.error){ showLoginError(); return; }
+        accessToken = resp.access_token;
+        await loadUserInfo(resp.access_token);
+      }
+    });
+    client.requestAccessToken();
+  } catch(e){
+    showLoginError();
+  }
+}
+async function loadUserInfo(token){
+  try {
+    const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{Authorization:'Bearer '+token}});
+    const u = await r.json();
+    currentUser = {email:u.email,name:u.name,picture:u.picture};
+    await checkAdminAndLoad();
+  } catch(e){ showLoginError(); }
+}
+function showLoginError(){
+  document.getElementById('login-loading').style.display='none';
+  document.querySelector('.btn-google').style.display='flex';
+  showToast('ไม่สามารถเข้าสู่ระบบได้ กรุณาลองใหม่','error');
+}
+async function checkAdminAndLoad(){
+  showLoading('กำลังตรวจสอบสิทธิ์...');
+  try {
+    admins = await fetchAdmins();
+    isAdmin = admins.includes(currentUser.email.toLowerCase());
+    setupUI();
+    await loadAllData();
+    showApp();
+  } catch(e){
+    showToast('เกิดข้อผิดพลาด: '+e.message,'error');
+    hideLoading();
+  }
+}
+function setupUI(){
+  document.getElementById('user-name').textContent = currentUser.name;
+  document.getElementById('user-role-label').textContent = isAdmin?'Administrator':'User (ดูข้อมูล)';
+  document.getElementById('role-badge').textContent = isAdmin?'👑 Admin':'👤 User';
+  document.getElementById('role-badge').className = 'badge-role '+(isAdmin?'badge-admin':'badge-user');
+  const av = document.getElementById('user-avatar');
+  if(currentUser.picture){ av.innerHTML=`<img src="${currentUser.picture}">`; } else { av.textContent=currentUser.name[0]; }
+  document.querySelectorAll('.admin-only').forEach(el=>{ el.style.display = isAdmin?'':'none'; });
+}
+function showApp(){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').classList.add('show');
+  hideLoading();
+}
+function signOut(){
+  if(!confirm('ออกจากระบบ?')) return;
+  currentUser=null;accessToken='';students=[];
+  document.getElementById('app').classList.remove('show');
+  document.getElementById('login-screen').style.display='flex';
+  document.querySelector('.btn-google').style.display='flex';
+  document.getElementById('login-loading').style.display='none';
+}
+
+// ============================================================
+// SHEETS API HELPERS
+// ============================================================
+const BASE = 'https://sheets.googleapis.com/v4/spreadsheets/';
+const DRIVE_BASE = 'https://www.googleapis.com/';
+function sheetsHeaders(){ return {Authorization:'Bearer '+accessToken,'Content-Type':'application/json'}; }
+
+async function sheetsGet(range){
+  const url=`${BASE}${CONFIG.SPREADSHEET_ID}/values/${encodeURIComponent(range)}?key=${CONFIG.API_KEY}`;
+  const r=await fetch(url,{headers:{Authorization:'Bearer '+accessToken}});
+  if(!r.ok) throw new Error('Sheets read error: '+r.status);
+  return r.json();
+}
+async function sheetsAppend(range, values){
+  const url=`${BASE}${CONFIG.SPREADSHEET_ID}/values/${encodeURIComponent(range)}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`;
+  const r=await fetch(url,{method:'POST',headers:sheetsHeaders(),body:JSON.stringify({values})});
+  if(!r.ok) throw new Error('Sheets append error');
+  return r.json();
+}
+async function sheetsUpdate(range, values){
+  const url=`${BASE}${CONFIG.SPREADSHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=RAW`;
+  const r=await fetch(url,{method:'PUT',headers:sheetsHeaders(),body:JSON.stringify({values})});
+  if(!r.ok) throw new Error('Sheets update error');
+  return r.json();
+}
+async function sheetsClear(range){
+  const url=`${BASE}${CONFIG.SPREADSHEET_ID}/values/${encodeURIComponent(range)}:clear`;
+  const r=await fetch(url,{method:'POST',headers:sheetsHeaders()});
+  if(!r.ok) throw new Error('Sheets clear error');
+}
+
+// ============================================================
+// LOAD DATA
+// ============================================================
+const HEADERS = ['id','agency','no','student_id','prefix','fullname','thai_name','faculty','group','term','degree','student_type','visa_date','visa_count','remark','grad_year','passport_no','photo_url','passport_url','address'];
+
+async function loadAllData(){
+  showLoading('กำลังโหลดข้อมูล...');
+  try {
+    await Promise.all([loadStudents(), loadOptions()]);
+    populateAllSelects();
+    renderDashboard();
+    renderStudents();
+    renderVisaTable();
+    renderAdmin();
+    setSyncStatus('ok','ข้อมูลล่าสุด');
+  } catch(e){
+    showToast('โหลดข้อมูลไม่สำเร็จ: '+e.message,'error');
+    setSyncStatus('error','เชื่อมต่อไม่ได้');
+  }
+  hideLoading();
+}
+async function fetchAdmins(){
+  try {
+    const d=await sheetsGet(CONFIG.SHEET_ADMINS+'!A2:A100');
+    return (d.values||[]).map(r=>r[0]&&r[0].trim().toLowerCase()).filter(Boolean);
+  } catch(){ return []; }
+}
+async function loadStudents(){
+  const d=await sheetsGet(CONFIG.SHEET_STUDENTS+'!A2:T5000');
+  students=(d.values||[]).map(row=>rowToStudent(row));
+}
+async function loadOptions(){
+  try {
+    const d=await sheetsGet(CONFIG.SHEET_OPTIONS+'!A1:Z50');
+    if(d.values&&d.values.length>0){
+      const rows=d.values;
+      rows.forEach(row=>{
+        if(row[0]&&row.length>1) options[row[0]]=row.slice(1).filter(Boolean);
+      });
+    }
+  } catch(e){ /* use defaults */ }
+}
+function rowToStudent(row){
+  const s={};
+  HEADERS.forEach((h,i)=>s[h]=row[i]||'');
+  return s;
+}
+function studentToRow(s){ return HEADERS.map(h=>s[h]||''); }
+async function syncFromSheets(){ await loadAllData(); showToast('Sync สำเร็จ ✓','success'); }
+
+// ============================================================
+// SAVE STUDENT TO SHEETS
+// ============================================================
+async function saveStudent(){
+  const fullname=document.getElementById('f-fullname').value.trim();
+  if(!fullname){showToast('กรุณากรอกชื่อ-นามสกุล','error');return;}
+  const btn=document.getElementById('save-btn');
+  btn.disabled=true;btn.textContent='กำลังบันทึก...';
+  try {
+    // Upload photos if any
+    let photoUrl=document.getElementById('f-photo-url').value;
+    let passportUrl=document.getElementById('f-passport-url').value;
+    if(pendingPhotoFile){ photoUrl=await uploadToDrive(pendingPhotoFile,'photo_'+fullname); }
+    if(pendingPassportFile){ passportUrl=await uploadToDrive(pendingPassportFile,'passport_'+fullname); }
+
+    const s={
+      id: editingRowIndex>=0 ? students[editingRowIndex].id : Date.now().toString(),
+      agency:document.getElementById('f-agency').value,
+      no:document.getElementById('f-no').value,
+      student_id:document.getElementById('f-student_id').value,
+      prefix:document.getElementById('f-prefix').value,
+      fullname,
+      thai_name:document.getElementById('f-thai_name').value,
+      faculty:document.getElementById('f-faculty').value,
+      group:document.getElementById('f-group').value,
+      term:document.getElementById('f-term').value,
+      degree:document.getElementById('f-degree').value,
+      student_type:document.getElementById('f-student_type').value,
+      visa_date:document.getElementById('f-visa_date').value,
+      visa_count:document.getElementById('f-visa_count').value,
+      remark:document.getElementById('f-remark').value,
+      grad_year:document.getElementById('f-grad_year').value,
+      passport_no:document.getElementById('f-passport_no').value,
+      photo_url:photoUrl,
+      passport_url:passportUrl,
+      address:document.getElementById('f-address').value,
+    };
+
+    if(editingRowIndex>=0){
+      const rowNum=editingRowIndex+2;
+      await sheetsUpdate(`${CONFIG.SHEET_STUDENTS}!A${rowNum}:T${rowNum}`,[studentToRow(s)]);
+      students[editingRowIndex]=s;
+      showToast('แก้ไขข้อมูลสำเร็จ ✓','success');
+    } else {
+      await sheetsAppend(CONFIG.SHEET_STUDENTS+'!A:T',[studentToRow(s)]);
+      students.push(s);
+      showToast('เพิ่มนักศึกษาสำเร็จ ✓','success');
+    }
+    closeModal();
+    renderStudents();renderDashboard();
+    pendingPhotoFile=null;pendingPassportFile=null;
+  } catch(e){
+    showToast('บันทึกไม่สำเร็จ: '+e.message,'error');
+  }
+  btn.disabled=false;btn.textContent='บันทึก';
+}
+async function deleteStudent(idx){
+  if(!isAdmin){showToast('ไม่มีสิทธิ์','error');return;}
+  if(!confirm('ยืนยันการลบนักศึกษานี้?'))return;
+  try {
+    // Clear row in sheets (set all cells to empty)
+    const rowNum=idx+2;
+    await sheetsUpdate(`${CONFIG.SHEET_STUDENTS}!A${rowNum}:T${rowNum}`,[HEADERS.map(()=>'')]);
+    students.splice(idx,1);
+    renderStudents();renderDashboard();
+    showToast('ลบข้อมูลสำเร็จ','success');
+  } catch(e){ showToast('ลบไม่สำเร็จ: '+e.message,'error'); }
+}
+
+// ============================================================
+// GOOGLE DRIVE UPLOAD
+// ============================================================
+async function uploadToDrive(file, name){
+  const metadata={name:`${name}_${Date.now()}.${file.name.split('.').pop()}`,mimeType:file.type};
+  const form=new FormData();
+  form.append('metadata',new Blob([JSON.stringify(metadata)],{type:'application/json'}));
+  form.append('file',file);
+  const r=await fetch(`${DRIVE_BASE}upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink`,{
+    method:'POST',headers:{Authorization:'Bearer '+accessToken},body:form
+  });
+  if(!r.ok) throw new Error('Drive upload failed');
+  const d=await r.json();
+  // Make file publicly viewable
+  await fetch(`${DRIVE_BASE}drive/v3/files/${d.id}/permissions`,{
+    method:'POST',headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},
+    body:JSON.stringify({role:'reader',type:'anyone'})
+  });
+  return `https://drive.google.com/thumbnail?id=${d.id}&sz=w400`;
+}
+async function handlePhotoUpload(input, prevId, icoId, urlInputId, type){
+  const file=input.files[0];if(!file)return;
+  if(file.size>5*1024*1024){showToast('รูปต้องไม่เกิน 5MB','error');return;}
+  if(type==='photo') pendingPhotoFile=file;
+  else pendingPassportFile=file;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const img=document.getElementById(prevId);
+    img.src=e.target.result;img.style.display='block';
+    document.getElementById(icoId).style.display='none';
+  };
+  reader.readAsDataURL(file);
+  showToast('เลือกรูปแล้ว จะอัพโหลดเมื่อกด บันทึก','');
+}
+
+// ============================================================
+// RENDER DASHBOARD
+// ============================================================
+function renderDashboard(){
+  const today=new Date();
+  const total=students.length;
+  const byDegree={};students.forEach(s=>{byDegree[s.degree]=(byDegree[s.degree]||0)+1});
+  const soon=students.filter(s=>{if(!s.visa_date)return false;const d=new Date(s.visa_date);const diff=(d-today)/86400000;return diff>=0&&diff<=60}).length;
+  const expired=students.filter(s=>s.visa_date&&new Date(s.visa_date)<today).length;
+  document.getElementById('stats-grid').innerHTML=`
+    <div class="stat-card"><div class="stat-label">ทั้งหมด</div><div class="stat-value">${total}</div><div class="stat-sub">คน</div></div>
+    <div class="stat-card"><div class="stat-label">ป.ตรี</div><div class="stat-value">${byDegree['ป.ตรี']||0}</div><div class="stat-sub">คน</div></div>
+    <div class="stat-card"><div class="stat-label">ป.โท</div><div class="stat-value">${byDegree['ป.โท']||0}</div><div class="stat-sub">คน</div></div>
+    <div class="stat-card"><div class="stat-label">ป.เอก</div><div class="stat-value">${byDegree['ป.เอก']||0}</div><div class="stat-sub">คน</div></div>
+    <div class="stat-card"><div class="stat-label" style="color:var(--warning)">วีซ่าใกล้หมด</div><div class="stat-value" style="color:var(--warning)">${soon}</div><div class="stat-sub">ใน 60 วัน</div></div>
+    <div class="stat-card"><div class="stat-label" style="color:var(--danger)">วีซ่าหมดอายุ</div><div class="stat-value" style="color:var(--danger)">${expired}</div><div class="stat-sub">คน</div></div>
+  `;
+  const groups={};students.forEach(s=>{groups[s.group]=(groups[s.group]||0)+1});
+  const maxG=Math.max(...Object.values(groups),1);
+  document.getElementById('chart-group').innerHTML=Object.entries(groups).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([k,v])=>`
+    <div class="bar-row"><span class="bar-label">${k||'(ไม่ระบุ)'}</span><div class="bar-track"><div class="bar-fill" style="width:${v/maxG*100}%;background:var(--primary)"></div></div><span class="bar-count">${v}</span></div>`).join('');
+  const maxD=Math.max(...Object.values(byDegree),1);
+  document.getElementById('chart-degree').innerHTML=Object.entries(byDegree).map(([k,v])=>`
+    <div class="bar-row"><span class="bar-label">${k||'(ไม่ระบุ)'}</span><div class="bar-track"><div class="bar-fill" style="width:${v/maxD*100}%;background:#10b981"></div></div><span class="bar-count">${v}</span></div>`).join('');
+  const alerts=students.filter(s=>{if(!s.visa_date)return false;const d=new Date(s.visa_date);const diff=(d-today)/86400000;return diff>=0&&diff<=60}).sort((a,b)=>new Date(a.visa_date)-new Date(b.visa_date));
+  document.getElementById('visa-alert-box').innerHTML=alerts.length===0?'<p style="color:var(--gray-400);font-size:13px">✅ ไม่มีวีซ่าที่ใกล้หมด</p>':
+  `<div class="table-wrap"><table><thead><tr><th>ชื่อ</th><th>กลุ่ม</th><th>วันหมด</th><th>คงเหลือ</th></tr></thead><tbody>${
+    alerts.map(s=>{const diff=Math.round((new Date(s.visa_date)-today)/86400000);return`<tr><td>${s.prefix} ${s.fullname}</td><td>${s.group}</td><td>${s.visa_date}</td><td><span class="badge ${diff<=14?'badge-red':'badge-yellow'}">${diff} วัน</span></td></tr>`}).join('')
+  }</tbody></table></div>`;
+}
+
+// ============================================================
+// RENDER STUDENTS TABLE
+// ============================================================
+function renderStudents(){
+  const q=(document.getElementById('search-input')||{value:''}).value.toLowerCase();
+  const fg=(document.getElementById('filter-group')||{value:''}).value;
+  const fd=(document.getElementById('filter-degree')||{value:''}).value;
+  const fa=(document.getElementById('filter-agency')||{value:''}).value;
+  filteredStudents=students.filter(s=>{
+    if(q&&![s.fullname,s.thai_name,s.passport_no,s.group].join(' ').toLowerCase().includes(q))return false;
+    if(fg&&s.group!==fg)return false;
+    if(fd&&s.degree!==fd)return false;
+    if(fa&&s.agency!==fa)return false;
+    return true;
+  });
+  const total=filteredStudents.length;
+  const pages=Math.max(1,Math.ceil(total/PAGE_SIZE));
+  if(currentPage>pages)currentPage=1;
+  const slice=filteredStudents.slice((currentPage-1)*PAGE_SIZE,currentPage*PAGE_SIZE);
+  document.getElementById('student-count').textContent=`(${total} คน)`;
+  const today=new Date();
+  document.getElementById('students-tbody').innerHTML=slice.map((s,li)=>{
+    const idx=students.indexOf(s);
+    let vbadge='';
+    if(s.visa_date){const d=new Date(s.visa_date),diff=Math.round((d-today)/86400000);
+      if(diff<0)vbadge=`<span class="badge badge-red">หมดแล้ว</span>`;
+      else if(diff<=30)vbadge=`<span class="badge badge-red">${diff}ว.</span>`;
+      else if(diff<=60)vbadge=`<span class="badge badge-yellow">${diff}ว.</span>`;
+      else vbadge=`<span class="badge badge-green">${s.visa_date}</span>`;}
+    const photo=s.photo_url?`<img src="${s.photo_url}" class="photo-thumb">`:`<div class="photo-placeholder">${(s.fullname||'?')[0]}</div>`;
+    return`<tr>
+      <td>${photo}</td><td style="font-weight:600">${s.no}</td>
+      <td><strong>${s.prefix} ${s.fullname}</strong></td>
+      <td style="color:var(--gray-500)">${s.thai_name}</td>
+      <td><span class="badge badge-blue">${s.group}</span></td>
+      <td><span class="badge badge-purple">${s.degree}</span></td>
+      <td><span class="badge badge-gray">${s.agency}</span></td>
+      <td>${vbadge}</td>
+      <td style="font-size:12px">${s.passport_no}</td>
+      <td style="font-size:11px;color:var(--gray-500);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.remark}</td>
+      <td style="text-align:center;white-space:nowrap">
+        <button class="btn btn-secondary btn-sm btn-icon" onclick="viewStudent(${idx})" title="ดู"><svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></button>
+        ${isAdmin?`<button class="btn btn-secondary btn-sm btn-icon" onclick="editStudent(${idx})" title="แก้ไข"><svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>
+        <button class="btn btn-danger btn-sm btn-icon" onclick="deleteStudent(${idx})" title="ลบ"><svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>`:''}
+      </td></tr>`;
+  }).join('')||'<tr><td colspan="11" style="text-align:center;padding:28px;color:var(--gray-400)">ไม่พบข้อมูล</td></tr>';
+  document.getElementById('page-info').textContent=`แสดง ${Math.min((currentPage-1)*PAGE_SIZE+1,total)}–${Math.min(currentPage*PAGE_SIZE,total)} จาก ${total}`;
+  let ph='';
+  ph+=`<button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage<=1?'disabled':''}>‹</button>`;
+  for(let i=1;i<=pages;i++){if(i===1||i===pages||Math.abs(i-currentPage)<=1)ph+=`<button class="page-btn ${i===currentPage?'active':''}" onclick="goPage(${i})">${i}</button>`;else if(Math.abs(i-currentPage)===2)ph+=`<span style="padding:0 3px;color:var(--gray-400)">…</span>`;}
+  ph+=`<button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage>=pages?'disabled':''}>›</button>`;
+  document.getElementById('pagination').innerHTML=ph;
+}
+function filterStudents(){currentPage=1;renderStudents();}
+function clearFilters(){
+  ['search-input','filter-group','filter-degree','filter-agency'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  filterStudents();
+}
+function goPage(p){currentPage=p;renderStudents();}
+
+// ============================================================
+// MODAL HELPERS
+// ============================================================
+function openAddModal(){
+  if(!isAdmin){showToast('ไม่มีสิทธิ์','error');return;}
+  editingRowIndex=-1;
+  document.getElementById('modal-title').textContent='เพิ่มนักศึกษา';
+  ['f-agency','f-no','f-student_id','f-prefix','f-fullname','f-thai_name','f-address','f-faculty','f-group','f-term','f-degree','f-student_type','f-grad_year','f-passport_no','f-visa_date','f-visa_count','f-remark'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('f-photo-url').value='';
+  document.getElementById('f-passport-url').value='';
+  document.getElementById('prev-photo').style.display='none';
+  document.getElementById('prev-passport').style.display='none';
+  document.getElementById('ico-photo').style.display='';
+  document.getElementById('ico-passport').style.display='';
+  pendingPhotoFile=null;pendingPassportFile=null;
+  showFormTab('ftab-basic',null);
+  document.getElementById('student-modal').classList.add('show');
+}
+function editStudent(idx){
+  if(!isAdmin){showToast('ไม่มีสิทธิ์','error');return;}
+  const s=students[idx];
+  editingRowIndex=idx;
+  document.getElementById('modal-title').textContent='แก้ไขข้อมูลนักศึกษา';
+  ['agency','no','student_id','prefix','fullname','thai_name','address','faculty','group','term','degree','student_type','grad_year','passport_no','visa_date','visa_count','remark'].forEach(k=>{
+    const el=document.getElementById('f-'+k);if(el)el.value=s[k]||'';
+  });
+  document.getElementById('f-photo-url').value=s.photo_url||'';
+  document.getElementById('f-passport-url').value=s.passport_url||'';
+  if(s.photo_url){document.getElementById('prev-photo').src=s.photo_url;document.getElementById('prev-photo').style.display='block';document.getElementById('ico-photo').style.display='none';}
+  if(s.passport_url){document.getElementById('prev-passport').src=s.passport_url;document.getElementById('prev-passport').style.display='block';document.getElementById('ico-passport').style.display='none';}
+  pendingPhotoFile=null;pendingPassportFile=null;
+  showFormTab('ftab-basic',null);
+  document.getElementById('student-modal').classList.add('show');
+}
+function closeModal(){document.getElementById('student-modal').classList.remove('show');}
+
+function viewStudent(idx){
+  const s=students[idx];
+  document.getElementById('dm-title').textContent=`${s.prefix} ${s.fullname}${s.thai_name?' ('+s.thai_name+')':''}`;
+  document.getElementById('dm-edit-btn').onclick=()=>{closeDetailModal();editStudent(idx);};
+  const photoH=s.photo_url?`<img src="${s.photo_url}" class="detail-photo">`:`<div class="detail-photo-ph"><svg width="36" height="36" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg><span>ไม่มีรูป</span></div>`;
+  const passH=s.passport_url?`<img src="${s.passport_url}" class="detail-photo">`:`<div class="detail-photo-ph"><svg width="36" height="36" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1"/></svg><span>ไม่มีรูป Passport</span></div>`;
+  const fields=[['Agency',s.agency],['No.',s.no],['Student ID',s.student_id],['คณะ',s.faculty],['กลุ่มเรียน',s.group],['เทอม',s.term],['Degree',s.degree],['Student Type',s.student_type],['Passport No.',s.passport_no],['วันต่อวีซ่า',s.visa_date],['ครั้งที่',s.visa_count],['Remark',s.remark],['ปีที่จบ',s.grad_year],['ที่อยู่',s.address]];
+  document.getElementById('dm-body').innerHTML=`
+    <div style="display:grid;grid-template-columns:180px 1fr;gap:18px">
+      <div style="display:flex;flex-direction:column;gap:10px;align-items:center">${photoH}<div style="font-size:10px;color:var(--gray-400)">รูปถ่าย</div>${passH}<div style="font-size:10px;color:var(--gray-400)">Passport</div></div>
+      <div class="detail-grid">${fields.filter(([,v])=>v).map(([k,v])=>`<div class="detail-row"><div class="detail-key">${k}</div><div class="detail-val">${v}</div></div>`).join('')}</div>
+    </div>`;
+  document.getElementById('detail-modal').classList.add('show');
+}
+function closeDetailModal(){document.getElementById('detail-modal').classList.remove('show');}
+
+function showFormTab(tabId, el){
+  ['ftab-basic','ftab-academic','ftab-visa','ftab-photo'].forEach(id=>{const t=document.getElementById(id);if(t)t.style.display='none';});
+  const t=document.getElementById(tabId);if(t)t.style.display='block';
+  if(el){el.closest('.tabs').querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');}
+  else{const tabs=document.querySelectorAll('#student-modal .tab');tabs.forEach(t=>t.classList.remove('active'));if(tabs[0])tabs[0].classList.add('active');}
+}
+
+// ============================================================
+// VISA PAGE
+// ============================================================
+function showVisaTab(mode, el){
+  visaTabMode=mode;
+  document.querySelectorAll('#page-visa .tab').forEach(t=>t.classList.remove('active'));
+  if(el)el.classList.add('active');
+  renderVisaTable();
+}
+function renderVisaTable(){
+  const today=new Date();
+  let list=students.filter(s=>s.visa_date);
+  if(visaTabMode==='expired') list=list.filter(s=>new Date(s.visa_date)<today);
+  else if(visaTabMode==='soon') list=list.filter(s=>{const d=new Date(s.visa_date);const diff=(d-today)/86400000;return diff>=0&&diff<=60;});
+  else if(visaTabMode==='ok') list=list.filter(s=>{const diff=(new Date(s.visa_date)-today)/86400000;return diff>60;});
+  list.sort((a,b)=>new Date(a.visa_date)-new Date(b.visa_date));
+  const wrap=document.getElementById('visa-table-wrap');
+  if(!wrap)return;
+  wrap.innerHTML=`<div class="table-wrap"><table><thead><tr><th>ชื่อ-นามสกุล</th><th>ชื่อไทย</th><th>กลุ่ม</th><th>Degree</th><th>Passport</th><th>วันต่อวีซ่า</th><th>สถานะ</th><th>Remark</th></tr></thead><tbody>${
+    list.map(s=>{const d=new Date(s.visa_date);const diff=Math.round((d-today)/86400000);
+      let badge=diff<0?`<span class="badge badge-red">หมด ${Math.abs(diff)}ว.</span>`:diff<=30?`<span class="badge badge-red">⚠️ ${diff}ว.</span>`:diff<=60?`<span class="badge badge-yellow">${diff}ว.</span>`:`<span class="badge badge-green">ปกติ</span>`;
+      return`<tr><td><strong>${s.prefix} ${s.fullname}</strong></td><td>${s.thai_name}</td><td><span class="badge badge-blue">${s.group}</span></td><td>${s.degree}</td><td>${s.passport_no}</td><td>${s.visa_date}</td><td>${badge}</td><td style="font-size:11px">${s.remark}</td></tr>`;
+    }).join('')||'<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--gray-400)">ไม่มีข้อมูล</td></tr>'
+  }</tbody></table></div>`;
+}
+
+// ============================================================
+// ADMIN PANEL
+// ============================================================
+function renderAdmin(){
+  const labels={agency:'Agency',faculty:'คณะ',group:'กลุ่มเรียน',term:'เทอม',degree:'Degree',student_type:'Student Type'};
+  const el=document.getElementById('admin-options');
+  if(!el)return;
+  el.innerHTML=Object.entries(labels).map(([k,label])=>`
+    <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--gray-100)">
+      <strong style="font-size:12px;color:var(--gray-700)">${label}</strong>
+      <div class="option-list">${(options[k]||[]).map((o,i)=>`<span class="option-tag">${o}<button onclick="removeOption('${k}',${i})">×</button></span>`).join('')}</div>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <input class="form-control" type="text" id="nopt-${k}" placeholder="เพิ่มตัวเลือก..." style="font-size:12px;padding:5px 9px">
+        <button class="btn btn-primary btn-sm" onclick="addOption('${k}')">+</button>
+      </div>
+    </div>`).join('');
+  const al=document.getElementById('admin-list');
+  if(al) al.innerHTML=`<div style="display:flex;flex-direction:column;gap:6px">${admins.map((a,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--gray-100)"><span style="font-size:13px">${a}</span><button class="btn btn-danger btn-sm" onclick="removeAdmin(${i})">ลบ</button></div>`).join('')||'<p style="font-size:13px;color:var(--gray-400)">ยังไม่มี Admin</p>'}</div>`;
+}
+async function addOption(key){
+  const el=document.getElementById('nopt-'+key);const val=el.value.trim();
+  if(!val)return;
+  if(!options[key])options[key]=[];
+  if(options[key].includes(val)){showToast('มีตัวเลือกนี้แล้ว','error');return;}
+  options[key].push(val);el.value='';
+  await saveOptions();
+  renderAdmin();populateAllSelects();showToast('เพิ่มสำเร็จ ✓','success');
+}
+async function removeOption(key,idx){
+  options[key].splice(idx,1);
+  await saveOptions();renderAdmin();populateAllSelects();
+}
+async function saveOptions(){
+  try {
+    const rows=Object.entries(options).map(([k,v])=>[k,...v]);
+    await sheetsClear(CONFIG.SHEET_OPTIONS+'!A1:Z50');
+    await sheetsAppend(CONFIG.SHEET_OPTIONS+'!A1',rows);
+  } catch(e){ showToast('บันทึก Options ไม่สำเร็จ','error'); }
+}
+function openAddAdminModal(){
+  const email=prompt('กรอก Gmail ของ Admin ใหม่:');
+  if(!email)return;
+  addAdmin(email.trim().toLowerCase());
+}
+async function addAdmin(email){
+  if(admins.includes(email)){showToast('มี Admin นี้แล้ว','error');return;}
+  admins.push(email);
+  try {
+    await sheetsAppend(CONFIG.SHEET_ADMINS+'!A:A',[[email]]);
+    renderAdmin();showToast('เพิ่ม Admin สำเร็จ ✓','success');
+  } catch(e){ showToast('เพิ่ม Admin ไม่สำเร็จ','error'); admins.pop(); }
+}
+async function removeAdmin(idx){
+  if(!confirm('ลบ Admin: '+admins[idx]+'?'))return;
+  admins.splice(idx,1);
+  try {
+    await sheetsClear(CONFIG.SHEET_ADMINS+'!A2:A200');
+    if(admins.length>0) await sheetsAppend(CONFIG.SHEET_ADMINS+'!A2',admins.map(a=>[a]));
+    renderAdmin();showToast('ลบ Admin สำเร็จ','success');
+  } catch(e){ showToast('ลบ Admin ไม่สำเร็จ','error'); }
+}
+
+// ============================================================
+// SELECTS
+// ============================================================
+function populateAllSelects(){
+  [['f-agency','agency'],['f-faculty','faculty'],['f-group','group'],['f-term','term'],['f-degree','degree'],['f-student_type','student_type']].forEach(([id,key])=>{
+    const el=document.getElementById(id);if(!el)return;
+    const cur=el.value;
+    el.innerHTML=(options[key]||[]).map(o=>`<option>${o}</option>`).join('');
+    if(cur)el.value=cur;
+  });
+  [['filter-group','group'],['filter-degree','degree'],['filter-agency','agency']].forEach(([id,key])=>{
+    const el=document.getElementById(id);if(!el)return;
+    const labels={group:'กลุ่มเรียน (ทั้งหมด)',degree:'Degree (ทั้งหมด)',agency:'Agency (ทั้งหมด)'};
+    el.innerHTML=`<option value="">${labels[key]||'ทั้งหมด'}</option>`+(options[key]||[]).map(o=>`<option>${o}</option>`).join('');
+  });
+}
+
+// ============================================================
+// EXPORT / IMPORT
+// ============================================================
+function exportExcel(){
+  const wb=XLSX.utils.book_new();
+  const headers=['Agency','No.','Student ID','คำนำหน้า','ชื่อ นามสกุล','ชื่อไทย','คณะ','กลุ่มเรียน','เทอม','Degree','Student Type','ต่อวีซ่า','ครั้งที่','Remark','ปีที่จบ','Passport No.','รูปถ่าย URL','รูป Passport URL','ที่อยู่'];
+  const rows=students.map(s=>[s.agency,s.no,s.student_id,s.prefix,s.fullname,s.thai_name,s.faculty,s.group,s.term,s.degree,s.student_type,s.visa_date,s.visa_count,s.remark,s.grad_year,s.passport_no,s.photo_url,s.passport_url,s.address]);
+  const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
+  XLSX.utils.book_append_sheet(wb,ws,'นักศึกษา');
+  XLSX.writeFile(wb,`students_${new Date().toISOString().slice(0,10)}.xlsx`);
+  showToast('Export สำเร็จ ✓','success');
+}
+async function importExcel(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=async e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
+      showLoading(`กำลังนำเข้า ${rows.length} รายการ...`);
+      const newRows=rows.filter(r=>r['ชื่อ นามสกุล']).map(r=>({
+        id:Date.now().toString()+Math.random(),agency:r['Agency']||'',no:r['No.']||'',student_id:r['Student ID']||'',
+        prefix:r['คำนำหน้า']||'Mr.',fullname:r['ชื่อ นามสกุล']||'',thai_name:r['ชื่อไทย']||'',
+        faculty:r['คณะ']||'',group:r['กลุ่มเรียน']||'',term:r['เทอม']||'',degree:r['Degree']||'',
+        student_type:r['Student Type']||'',visa_date:r['ต่อวีซ่า']?String(r['ต่อวีซ่า']).slice(0,10):'',
+        visa_count:r['ครั้งที่']||'',remark:r['Remark']||'',grad_year:r['ปีที่จบ']||'',
+        passport_no:r['Passport No.']||'',photo_url:'',passport_url:'',address:r['ที่อยู่']||''
+      }));
+      if(newRows.length>0){
+        await sheetsAppend(CONFIG.SHEET_STUDENTS+'!A:T',newRows.map(studentToRow));
+        students.push(...newRows);
+      }
+      renderStudents();renderDashboard();
+      showToast(`นำเข้า ${newRows.length} รายการสำเร็จ ✓`,'success');
+    }catch(e){showToast('นำเข้าไม่สำเร็จ: '+e.message,'error');}
+    hideLoading();input.value='';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ============================================================
+// UI HELPERS
+// ============================================================
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  const titles={dashboard:'Dashboard',students:'รายชื่อนักศึกษา',visa:'ติดตามวีซ่า',admin:'Admin Panel'};
+  document.getElementById('page-title').textContent=titles[name]||name;
+  event.currentTarget.classList.add('active');
+  if(name==='dashboard')renderDashboard();
+  if(name==='visa')renderVisaTable();
+  if(name==='admin')renderAdmin();
+}
+function showLoading(txt){ document.getElementById('loading-text').textContent=txt||'กำลังโหลด...';document.getElementById('loading').classList.add('show'); }
+function hideLoading(){ document.getElementById('loading').classList.remove('show'); }
+function showToast(msg,type=''){
+  const el=document.getElementById('toast');el.textContent=msg;el.className='toast '+(type||'');
+  el.classList.add('show');setTimeout(()=>el.classList.remove('show'),3200);
+}
+function setSyncStatus(state,txt){
+  document.getElementById('sync-dot').className='sync-dot '+state;
+  document.getElementById('sync-text').textContent=txt;
+}
+document.getElementById('student-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
+document.getElementById('detail-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeDetailModal();});
+</script>
+</body>
+</html>
